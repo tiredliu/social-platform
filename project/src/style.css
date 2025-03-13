@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-vue-green: #42b883;
+  --color-vue-dark: #35495e;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-vue-green text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-vue-dark text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border-gray-300 focus:border-vue-green focus:ring focus:ring-vue-green focus:ring-opacity-50;
+  }
+}
+
+body {
+  @apply bg-gray-50;
+}
