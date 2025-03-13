@@ -17,7 +17,8 @@ const handleRemoveFriend = (friendId: string) => {
       <div v-if="friendStore.friends.length === 0" class="text-gray-500 text-center py-4">
         还没有好友，去添加一些吧！
       </div>
-      <div v-for="friend in friendStore.friends" :key="friend.id" class="flex items-center justify-between">
+      <div v-for="friend in friendStore.friends" :key="friend.id" 
+           class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
         <div class="flex items-center">
           <div class="h-10 w-10 rounded-full bg-vue-dark flex items-center justify-center text-white">
             {{ friend.username[0].toUpperCase() }}
@@ -29,9 +30,9 @@ const handleRemoveFriend = (friendId: string) => {
         </div>
         <button
           @click="handleRemoveFriend(friend.id)"
-          class="text-sm text-red-600 hover:text-red-800"
+          class="btn-secondary bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200"
         >
-          删除
+          删除好友
         </button>
       </div>
     </div>

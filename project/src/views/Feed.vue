@@ -10,12 +10,27 @@ import FriendRequests from '../components/FriendRequests.vue'
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
+interface Reply {
+  id: string
+  userId: string
+  username: string
+  content: string
+  createdAt: string
+  likes: number
+  liked: boolean
+  replyTo?: string // 回复给谁
+}
+
 interface Comment {
   id: string
   userId: string
   username: string
   content: string
   createdAt: string
+  likes: number
+  liked: boolean
+  replies: Reply[]
+  showReplyBox: boolean
 }
 
 interface Post {
@@ -50,6 +65,7 @@ const newPost = ref('')
 const selectedImage = ref<File | null>(null)
 const previewImage = ref<string | null>(null)
 const newComments = ref<{ [key: string]: string }>({})
+const newReplies = ref<{ [key: string]: { content: string; replyTo?: string } }>({})
 
 const handleImageSelect = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -102,8 +118,25 @@ const toggleLike = (post: Post) => {
   post.likes += post.liked ? 1 : -1
 }
 
+const toggleCommentLike = (comment: Comment) => {
+  comment.liked = !comment.liked
+  comment.likes += comment.liked ? 1 : -1
+}
+
+const toggleReplyLike = (reply: Reply) => {
+  reply.liked = !reply.liked
+  reply.likes += reply.liked ? 1 : -1
+}
+
 const toggleCommentBox = (post: Post) => {
   post.showCommentBox = !post.showCommentBox
+}
+
+const toggleReplyBox = (comment: Comment) => {
+  comment.showReplyBox = !comment.showReplyBox
+  if (comment.showReplyBox) {
+    newReplies.value[comment.id] = { content: '' }
+  }
 }
 
 const addComment = (post: Post) => {
@@ -115,11 +148,35 @@ const addComment = (post: Post) => {
     userId: '1',
     username: 'demo',
     content: commentContent,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    likes: 0,
+    liked: false,
+    replies: [],
+    showReplyBox: false
   }
 
   post.comments.push(comment)
   newComments.value[post.id] = ''
+}
+
+const addReply = (comment: Comment, replyToUsername?: string) => {
+  const replyData = newReplies.value[comment.id]
+  if (!replyData?.content.trim()) return
+
+  const reply: Reply = {
+    id: Date.now().toString(),
+    userId: '1',
+    username: 'demo',
+    content: replyData.content,
+    createdAt: new Date().toISOString(),
+    likes: 0,
+    liked: false,
+    replyTo: replyToUsername
+  }
+
+  comment.replies.push(reply)
+  newReplies.value[comment.id] = { content: '' }
+  comment.showReplyBox = false
 }
 
 const friendPosts = computed(() => {
@@ -128,6 +185,11 @@ const friendPosts = computed(() => {
     post.userId === '1' || friendIds.includes(post.userId)
   )
 })
+
+const handleAddFriend = (userId: string) => {
+  // 这里模拟发送好友请求
+  console.log('发送好友请求给用户:', userId)
+}
 </script>
 
 <template>
@@ -184,16 +246,25 @@ const friendPosts = computed(() => {
 
       <div class="space-y-6">
         <div v-for="post in friendPosts" :key="post.id" class="card">
-          <div class="flex items-center mb-4">
-            <div class="h-10 w-10 rounded-full bg-vue-dark flex items-center justify-center text-white">
-              {{ post.username[0].toUpperCase() }}
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center">
+              <div class="h-10 w-10 rounded-full bg-vue-dark flex items-center justify-center text-white">
+                {{ post.username[0].toUpperCase() }}
+              </div>
+              <div class="ml-4">
+                <h3 class="font-medium text-gray-900">{{ post.username }}</h3>
+                <p class="text-sm text-gray-500">
+                  {{ formatTime(post.createdAt) }}
+                </p>
+              </div>
             </div>
-            <div class="ml-4">
-              <h3 class="font-medium text-gray-900">{{ post.username }}</h3>
-              <p class="text-sm text-gray-500">
-                {{ formatTime(post.createdAt) }}
-              </p>
-            </div>
+            <button
+              v-if="post.userId !== '1'"
+              @click="handleAddFriend(post.userId)"
+              class="btn-primary px-4 py-2 text-sm transition-colors duration-200"
+            >
+              添加好友
+            </button>
           </div>
           <p class="text-gray-800">{{ post.content }}</p>
           
@@ -207,7 +278,7 @@ const friendPosts = computed(() => {
           
           <div class="mt-4 flex items-center space-x-4">
             <button 
-              class="btn-secondary px-4 py-2 flex items-center space-x-2"
+              class="btn-secondary px-4 py-2 flex items-center space-x-2 transition-colors duration-200"
               :class="{ 'bg-vue-green': post.liked }"
               @click="toggleLike(post)"
             >
@@ -215,7 +286,7 @@ const friendPosts = computed(() => {
               <span>{{ post.liked ? '已点赞' : '点赞' }}</span>
             </button>
             <button 
-              class="btn-secondary px-4 py-2 flex items-center space-x-2"
+              class="btn-secondary px-4 py-2 flex items-center space-x-2 transition-colors duration-200"
               @click="toggleCommentBox(post)"
             >
               <span>{{ post.comments.length }}</span>
@@ -234,7 +305,7 @@ const friendPosts = computed(() => {
                 @keyup.enter="addComment(post)"
               >
               <button 
-                class="btn-primary"
+                class="btn-primary px-4 py-2 transition-colors duration-200"
                 @click="addComment(post)"
               >
                 发送
@@ -242,17 +313,80 @@ const friendPosts = computed(() => {
             </div>
 
             <!-- 评论列表 -->
-            <div class="space-y-3">
+            <div class="space-y-4">
               <div 
                 v-for="comment in post.comments" 
                 :key="comment.id"
-                class="bg-gray-50 p-3 rounded-lg"
+                class="bg-gray-50 p-4 rounded-lg space-y-3"
               >
-                <div class="flex items-center space-x-2">
-                  <span class="font-medium text-gray-900">{{ comment.username }}</span>
-                  <span class="text-sm text-gray-500">{{ formatTime(comment.createdAt) }}</span>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <span class="font-medium text-gray-900">{{ comment.username }}</span>
+                    <span class="text-sm text-gray-500">{{ formatTime(comment.createdAt) }}</span>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <button 
+                      class="text-sm flex items-center space-x-1 text-gray-500 hover:text-vue-green transition-colors duration-200"
+                      :class="{ 'text-vue-green': comment.liked }"
+                      @click="toggleCommentLike(comment)"
+                    >
+                      <span>{{ comment.likes }}</span>
+                      <span>{{ comment.liked ? '已点赞' : '点赞' }}</span>
+                    </button>
+                    <button 
+                      class="text-sm text-gray-500 hover:text-vue-green transition-colors duration-200"
+                      @click="toggleReplyBox(comment)"
+                    >
+                      回复
+                    </button>
+                  </div>
                 </div>
-                <p class="mt-1 text-gray-800">{{ comment.content }}</p>
+                <p class="text-gray-800">{{ comment.content }}</p>
+
+                <!-- 回复框 -->
+                <div v-if="comment.showReplyBox" class="flex space-x-2">
+                  <input
+                    v-model="newReplies[comment.id].content"
+                    type="text"
+                    class="input-field flex-1"
+                    :placeholder="`回复 ${comment.username}...`"
+                    @keyup.enter="addReply(comment, comment.username)"
+                  >
+                  <button 
+                    class="btn-primary px-4 py-2 transition-colors duration-200"
+                    @click="addReply(comment, comment.username)"
+                  >
+                    回复
+                  </button>
+                </div>
+
+                <!-- 回复列表 -->
+                <div v-if="comment.replies.length > 0" class="pl-4 space-y-2">
+                  <div 
+                    v-for="reply in comment.replies" 
+                    :key="reply.id"
+                    class="bg-white p-3 rounded-lg"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2">
+                        <span class="font-medium text-gray-900">{{ reply.username }}</span>
+                        <span v-if="reply.replyTo" class="text-gray-500">
+                          回复 {{ reply.replyTo }}
+                        </span>
+                        <span class="text-sm text-gray-500">{{ formatTime(reply.createdAt) }}</span>
+                      </div>
+                      <button 
+                        class="text-sm flex items-center space-x-1 text-gray-500 hover:text-vue-green transition-colors duration-200"
+                        :class="{ 'text-vue-green': reply.liked }"
+                        @click="toggleReplyLike(reply)"
+                      >
+                        <span>{{ reply.likes }}</span>
+                        <span>{{ reply.liked ? '已点赞' : '点赞' }}</span>
+                      </button>
+                    </div>
+                    <p class="mt-1 text-gray-800">{{ reply.content }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -20,7 +20,8 @@ const handleRejectRequest = (friendId: string) => {
       <div v-if="friendStore.friendRequests.length === 0" class="text-gray-500 text-center py-4">
         暂无好友请求
       </div>
-      <div v-for="request in friendStore.friendRequests" :key="request.id" class="flex items-center justify-between">
+      <div v-for="request in friendStore.friendRequests" :key="request.id" 
+           class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
         <div class="flex items-center">
           <div class="h-10 w-10 rounded-full bg-vue-dark flex items-center justify-center text-white">
             {{ request.username[0].toUpperCase() }}
@@ -30,18 +31,18 @@ const handleRejectRequest = (friendId: string) => {
             <p class="text-sm text-gray-500">{{ request.email }}</p>
           </div>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex space-x-3">
           <button
             @click="handleAcceptRequest(request)"
-            class="text-sm text-vue-green hover:text-vue-green-dark"
+            class="btn-primary px-4 py-2 text-sm flex items-center transition-colors duration-200"
           >
-            接受
+            接受请求
           </button>
           <button
             @click="handleRejectRequest(request.id)"
-            class="text-sm text-red-600 hover:text-red-800"
+            class="btn-secondary bg-gray-500 hover:bg-gray-600 px-4 py-2 text-sm flex items-center transition-colors duration-200"
           >
-            拒绝
+            拒绝请求
           </button>
         </div>
       </div>
