@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import axios from 'axios'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -14,10 +15,20 @@ const handleRegister = async () => {
     error.value = '两次输入的密码不一致'
     return
   }
-  
+
   try {
-    // TODO: Implement actual API call
-    router.push('/login')
+    const response = await axios.post('http://localhost:8000/register/', {
+      username: username.value,
+      email: email.value,
+      password: password.value,
+      confirmPassword: confirmPassword.value
+    })
+
+    if (response.status === 201) {
+      router.push('/login')
+    } else {
+      error.value = '注册失败'
+    }
   } catch (err) {
     error.value = '注册失败'
   }
